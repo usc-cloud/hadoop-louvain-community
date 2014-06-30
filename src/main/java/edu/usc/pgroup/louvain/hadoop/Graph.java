@@ -1,13 +1,29 @@
+/*
+ *  Copyright 2013 University of Southern California
+ *
+ *  Licensed under the Apache License, Version 2.0 (the "License");
+ *  you may not use this file except in compliance with the License.
+ *  You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *  Unless required by applicable law or agreed to in writing, software
+ *  distributed under the License is distributed on an "AS IS" BASIS,
+ *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *  See the License for the specific language governing permissions and
+ *  limitations under the License.package edu.usc.goffish.gopher.sample;
+ */
 package edu.usc.pgroup.louvain.hadoop;
 
 import org.apache.hadoop.mapred.FileInputFormat;
 
 import java.io.*;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.StringTokenizer;
 
 /**
- * Created by charith on 6/25/14.
+ * Created by Charith Wickramaarachchi on 6/25/14.
  */
 public class Graph {
 
@@ -21,9 +37,9 @@ public class Graph {
     private long nb_links;
     private double total_weight;
 
-    private List<Long> degrees;
-    private List<Integer> links;
-    private List<Float> weights;
+    private List<Long> degrees = new ArrayList<Long>(1000);
+    private List<Integer> links = new ArrayList<Integer>(5000);
+    private List<Float> weights = new ArrayList<Float>(5000);
 
 
 
@@ -31,6 +47,7 @@ public class Graph {
         nb_nodes     = 0;
         nb_links     = 0;
         total_weight = 0;
+
     }
 
 
@@ -63,7 +80,13 @@ public class Graph {
             line = fileReader.readLine();
         }
         this.nb_nodes = nodeId;
+        this.nb_links = degrees.get(nb_nodes -1);
+        this.total_weight=0;
 
+        // Compute total weight
+        for (int i=0 ; i<nb_nodes ; i++) {
+            total_weight += (double)weighted_degree(i);
+        }
 
     }
 
@@ -73,25 +96,54 @@ public class Graph {
 
     }
 
-    Graph(int nb_nodes, int nb_links, double total_weight, List<Integer> degrees, List<Integer> links, List<Float> weights) {
-
-    }
 
 
     void display() {
+        for ( int node=0 ; node<nb_nodes ; node++) {
+            Pair<Integer, Integer> p = neighbors(node);
+            System.out.print("" + node + ":");
 
+            for (int i=0 ; i<nb_neighbors(node) ; i++) {
+                if (true) {
+                    if (weights.size()!=0)
+                        System.out.print(" (" + links.get(p.getElement0() + i) + " " + weights.get(p.getElement1() + i) + ")");
+                    else
+                        System.out.print(" " + links.get(p.getElement0() + i));
+                }
+            }
+            System.out.print("\n");
+        }
     }
-    void display_reverse(){
 
-    }
 
-    void display_binary(String outfile){
-
+    void display_binary(OutputStream out){
+        //TODO
     }
 
 
     boolean check_symmetry() {
-        return false;
+        int error=0;
+        for (int node=0 ; node<nb_nodes ; node++) {
+            Pair<Integer, Integer> p = neighbors(node);
+            for (int i=0 ; i<nb_neighbors(node) ; i++) {
+                 int neigh = links.get(p.getElement0() + i);
+                float weight = weights.get(p.getElement1() + i);
+
+                Pair<Integer, Integer> p_neigh = neighbors(neigh);
+                for (int j=0 ; j<nb_neighbors(neigh) ; j++) {
+                    int neigh_neigh = links.get(p_neigh.getElement0() + j);
+                    float neigh_weight = weights.get(p_neigh.getElement1() + j);
+
+                    if (node==neigh_neigh && weight!=neigh_weight) {
+                        System.out.println(""+ node + " " + neigh + " " + weight + " " + neigh_neigh);
+                        if (error++==10) {
+                            System.exit(0);
+                        }
+                    }
+                }
+            }
+        }
+        return (error==0);
     }
 
 
