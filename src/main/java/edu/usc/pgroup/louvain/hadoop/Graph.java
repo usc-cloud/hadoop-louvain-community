@@ -201,5 +201,39 @@ public class Graph {
     }
 
 
+    public int getNb_nodes() {
+        return nb_nodes;
+    }
 
+    public long getNb_links() {
+        return nb_links;
+    }
+
+    public double getTotal_weight() {
+        return total_weight;
+    }
+
+    public List<Long> getDegrees() {
+        return degrees;
+    }
+
+    public List<Integer> getLinks() {
+        return links;
+    }
+
+    public List<Float> getWeights() {
+        return weights;
+    }
+
+    public void setNb_nodes(int nb_nodes) {
+        this.nb_nodes = nb_nodes;
+    }
+
+    public void setNb_links(long nb_links) {
+        this.nb_links = nb_links;
+    }
+
+    public void setTotal_weight(double total_weight) {
+        this.total_weight = total_weight;
+    }
 }

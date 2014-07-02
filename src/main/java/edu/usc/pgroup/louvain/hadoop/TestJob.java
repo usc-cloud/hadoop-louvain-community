@@ -39,11 +39,11 @@ public class TestJob {
 
     public static class MapJob extends Mapper<Text, BytesWritable, Text, Text> {
 
-        public void map(Text text, BytesWritable bytesWritable, OutputCollector<Text, Text> textTextOutputCollector, Reporter reporter) throws IOException {
 
+        @Override
+        protected void map(Text key, BytesWritable value, Context context) throws IOException, InterruptedException {
 
-            System.out.println("MMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMMM");
-            InputStream in = new ByteArrayInputStream(bytesWritable.getBytes());
+            InputStream in = new ByteArrayInputStream(value.getBytes());
 
             BufferedReader reader = new BufferedReader(new InputStreamReader(in));
 
@@ -58,20 +58,22 @@ public class TestJob {
 
             System.out.println("**************************************" + linecount);
 
-            textTextOutputCollector.collect(text,new Text(""+ linecount));
+            context.write(key,new Text("" + linecount));
 
         }
+
+
     }
 
 
     public static class ReduceJob extends Reducer<Text, Text, Text, IntWritable> {
 
-        public void reduce(Text text, Iterator<Text> iterator, OutputCollector<Text, IntWritable> textIntWritableOutputCollector, Reporter reporter) throws IOException {
-
+        @Override
+        protected void reduce(Text key, Iterable<Text> values, Context context) throws IOException, InterruptedException {
             System.out.println("RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRr");
-
+            Iterator<Text> iterator = values.iterator();
             while (iterator.hasNext()) {
-                textIntWritableOutputCollector.collect(new Text("#############" + text),new IntWritable(Integer.parseInt(iterator.next().toString())));
+                context.write(key,new IntWritable(Integer.parseInt(iterator.next().toString())));
             }
         }
     }
@@ -90,8 +92,8 @@ public class TestJob {
         job.setOutputFormatClass(TextOutputFormat.class);
 
         job.setOutputKeyClass(Text.class);
-     //   job.setMapOutputValueClass(Text.class);
-        job.setOutputValueClass(BytesWritable.class);
+        job.setMapOutputValueClass(Text.class);
+        job.setOutputValueClass(IntWritable.class);
 
         FileInputFormat.addInputPath(job, new Path(args[0]));
         TextOutputFormat.setOutputPath(job, new Path(args[1]));
