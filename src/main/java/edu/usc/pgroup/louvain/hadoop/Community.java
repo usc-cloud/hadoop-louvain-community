@@ -360,4 +360,11 @@ public class Community {
     }
 
 
+    public Graph getG() {
+        return g;
+    }
+
+    public int getSize() {
+        return size;
+    }
 }

@@ -40,6 +40,8 @@ public class TestJob {
     public static class MapJob extends Mapper<Text, BytesWritable, Text, Text> {
 
 
+        private boolean verbose = false;
+
         @Override
         protected void map(Text key, BytesWritable value, Context context) throws IOException, InterruptedException {
 
