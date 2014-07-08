@@ -20,9 +20,7 @@ import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
 
-import java.io.ByteArrayInputStream;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 
 /**
  * Created by Charith Wickramaarachchi on 6/30/14.
@@ -44,9 +42,17 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
          * Remote
          */
 
-        InputStream inputStream = new ByteArrayInputStream(value.getBytes());
+        //example: 4elt_0.part
 
-        int rank = 0;
+        String fileName = key.toString();
+
+        String _parts[] = fileName.split("_");
+
+        String dotParts[] = _parts[1].split(".");
+
+
+        InputStream inputStream = new ByteArrayInputStream(value.getBytes());
+        int rank = Integer.parseInt(dotParts[1]);
 
         if(verbose) {
             System.out.println("Begin");
@@ -91,10 +97,15 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
 
 
 
-            // Renumber
+            GraphMessage msg = createGraphMessage(g,c,rank);
+
 
             //Send to reducer
 
+            ByteArrayOutputStream bos = new ByteArrayOutputStream();
+            ObjectOutputStream oo = new ObjectOutputStream(bos);
+            oo.writeObject(msg);
+            context.write(new Text("one"),new BytesWritable(bos.toByteArray()));
 
 
         } catch (Exception e) {
@@ -103,4 +114,10 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
         }
 
     }
+
+    private GraphMessage createGraphMessage(Graph g, Community c, int tank) {
+
+        return null;
+    }
+
 }

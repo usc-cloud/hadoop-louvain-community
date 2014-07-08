@@ -38,8 +38,8 @@ public class Graph {
     private List<Integer> links = new ArrayList<Integer>(5000);
     private List<Float> weights = new ArrayList<Float>(5000);
 
-    private HashMap<Integer, List<HashMap.SimpleEntry>> remoteMappings = new HashMap<Integer, List<HashMap.SimpleEntry>>();
 
+    private List<RemoteMap> remoteMaps = new ArrayList<RemoteMap>();
 
     Graph() {
         nb_nodes = 0;
@@ -78,13 +78,7 @@ public class Graph {
                 int tartgetP = Integer.parseInt(sinkP[0]);
                 int sink  = Integer.parseInt(sinkP[1]);
 
-                if(remoteMappings.containsKey(source)) {
-                    remoteMappings.get(source).add(new HashMap.SimpleEntry(tartgetP,sink));
-                } else {
-                    ArrayList<HashMap.SimpleEntry> list = new ArrayList<HashMap.SimpleEntry>();
-                    list.add(new HashMap.SimpleEntry(tartgetP,sink));
-                    remoteMappings.put(source,list);
-                }
+                remoteMaps.add(new RemoteMap(source,sink,tartgetP));
 
             }
 
@@ -271,5 +265,33 @@ public class Graph {
 
     public void setTotal_weight(double total_weight) {
         this.total_weight = total_weight;
+    }
+
+
+     class RemoteMap implements Serializable{
+
+        private int source;
+
+        private int sink;
+
+        private int sinkPart;
+
+        public RemoteMap(int source, int sink, int sinkPart) {
+            this.source = source;
+            this.sink = sink;
+            this.sinkPart = sinkPart;
+        }
+
+        public int getSource() {
+            return source;
+        }
+
+        public int getSink() {
+            return sink;
+        }
+
+        public int getSinkPart() {
+            return sinkPart;
+        }
     }
 }
