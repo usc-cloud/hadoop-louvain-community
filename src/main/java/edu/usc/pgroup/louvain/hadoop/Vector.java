@@ -18,27 +18,40 @@ package edu.usc.pgroup.louvain.hadoop;
 import java.util.ArrayList;
 
 /**
- * Created by Charith Wickramaarachchi on 7/7/14.
+ * Created by Charith Wickramaarachchi on 7/10/14.
  */
-public class Test {
+public class Vector<T> {
 
-    public static void main(String[] args) {
-        Vector<Integer> list = new Vector<Integer>();
+    private ArrayList<T> list;
 
-
-
-        int array[] = {2,3,1,4,5,0};
-
-        for(int i : array) {
-            list.setRandom(i, i);
-        }
-        System.out.println("Size: " + list.getList().size());
-
-
-        for(int i : list.getList()) {
-            System.out.println(i);
-        }
-
-
+    public Vector() {
+        list = new ArrayList<T>();
     }
+
+    public Vector(int initialCapacity) {
+        list = new ArrayList<T>(initialCapacity);
+        for(int i=0;i<initialCapacity;i++) {
+            list.add(null);
+        }
+    }
+
+
+    public ArrayList<T> getList() {
+        return list;
+    }
+
+    public void setRandom(int index, T t) {
+        if (index < list.size()) {
+            list.set(index, t);
+        } else {
+            while(index >= list.size()) {
+                list.add(null);
+            }
+            list.set(index,t);
+        }
+    } 
+    public int size() {
+        return list.size();
+    }
+
 }

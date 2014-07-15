@@ -26,9 +26,9 @@ import java.io.Serializable;
  */
 public class GraphMessage implements Serializable{
 
-    private long degrees[];
-    private int links[];
-    private float weights[];
+    private Long degrees[];
+    private Integer links[];
+    private Float weights[];
 
     private long nb_links;
     private long nb_nodes;
@@ -36,31 +36,31 @@ public class GraphMessage implements Serializable{
 
     private int currentPartition;
 
-    private int[] n2c;
+    private Integer[] n2c;
 
     private Graph.RemoteMap remoteMap[];
 
-    public long[] getDegrees() {
+    public Long[] getDegrees() {
         return degrees;
     }
 
-    public void setDegrees(long[] degrees) {
+    public void setDegrees(Long[] degrees) {
         this.degrees = degrees;
     }
 
-    public int[] getLinks() {
+    public Integer[] getLinks() {
         return links;
     }
 
-    public void setLinks(int[] links) {
+    public void setLinks(Integer[] links) {
         this.links = links;
     }
 
-    public float[] getWeights() {
+    public Float[] getWeights() {
         return weights;
     }
 
-    public void setWeights(float[] weights) {
+    public void setWeights(Float[] weights) {
         this.weights = weights;
     }
 
@@ -88,11 +88,11 @@ public class GraphMessage implements Serializable{
         this.total_weight = total_weight;
     }
 
-    public int[] getN2c() {
+    public Integer[] getN2c() {
         return n2c;
     }
 
-    public void setN2c(int[] n2c) {
+    public void setN2c(Integer[] n2c) {
         this.n2c = n2c;
     }
 
@@ -102,5 +102,13 @@ public class GraphMessage implements Serializable{
 
     public void setRemoteMap(Graph.RemoteMap[] remoteMap) {
         this.remoteMap = remoteMap;
+    }
+
+    public int getCurrentPartition() {
+        return currentPartition;
+    }
+
+    public void setCurrentPartition(int currentPartition) {
+        this.currentPartition = currentPartition;
     }
 }

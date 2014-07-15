@@ -15,6 +15,7 @@
  */
 package edu.usc.pgroup.louvain.hadoop;
 
+import org.apache.commons.math.optimization.VectorialConvergenceChecker;
 import org.apache.hadoop.mapred.FileInputFormat;
 
 import java.io.*;
@@ -34,12 +35,20 @@ public class Graph {
     private long nb_links;
     private double total_weight;
 
-    private List<Long> degrees = new ArrayList<Long>(1000);
-    private List<Integer> links = new ArrayList<Integer>(5000);
-    private List<Float> weights = new ArrayList<Float>(5000);
+    private Vector<Long> degrees = new Vector<Long>(1000);
+    private Vector<Integer> links = new Vector<Integer>(5000);
+    private Vector<Float> weights = new Vector<Float>(5000);
 
 
-    private List<RemoteMap> remoteMaps = new ArrayList<RemoteMap>();
+    private Vector<RemoteMap> remoteMaps = new Vector<RemoteMap>();
+
+
+    private Map<Integer,Vector<Integer>> remoteEdges;
+    private Map<Integer,Vector<Float>> remoteWeights;
+
+    private boolean containRemote = false;
+
+
 
     Graph() {
         nb_nodes = 0;
@@ -47,6 +56,8 @@ public class Graph {
         total_weight = 0;
 
     }
+
+
 
 
     Graph(InputStream inputStream, int type) throws Exception {
@@ -78,7 +89,7 @@ public class Graph {
                 int tartgetP = Integer.parseInt(sinkP[0]);
                 int sink  = Integer.parseInt(sinkP[1]);
 
-                remoteMaps.add(new RemoteMap(source,sink,tartgetP));
+                remoteMaps.getList().add(new RemoteMap(source, sink, tartgetP));
 
             }
 
@@ -99,18 +110,18 @@ public class Graph {
 
             while (tokenizer.hasMoreTokens()) {
                 int e = Integer.parseInt(tokenizer.nextToken());
-                links.add(e);
+                links.getList().add(e);
                 count++;
             }
 
-            degrees.add(nodeId, (long) count);
+            degrees.setRandom(nodeId, (long) count);
 
         }
 
         graph = null;
 
         this.nb_nodes = degrees.size();
-        this.nb_links = degrees.get(nb_nodes - 1);
+        this.nb_links = degrees.getList().get(nb_nodes - 1);
         this.total_weight = 0;
 
         // Compute total weight
@@ -136,15 +147,65 @@ public class Graph {
             for (int i = 0; i < nb_neighbors(node); i++) {
                 if (true) {
                     if (weights.size() != 0)
-                        System.out.print(" (" + links.get(p.getElement0() + i) + " " + weights.get(p.getElement1() + i) + ")");
+                        System.out.print(" (" + links.getList().get(p.getElement0() + i) + " " + weights.getList().get(p.getElement1() + i) + ")");
                     else
-                        System.out.print(" " + links.get(p.getElement0() + i));
+                        System.out.print(" " + links.getList().get(p.getElement0() + i));
                 }
             }
             System.out.print("\n");
         }
     }
 
+    public void addRemoteEdges(Map<Integer,Vector<Integer>> remoteEdges, Map<Integer,Vector<Float>> weights) {
+
+        this.remoteEdges = remoteEdges;
+        this.remoteWeights= weights;
+
+
+        Iterator<Integer> itw = weights.keySet().iterator();
+        double res = 0;
+
+        while (itw.hasNext()) {
+            int node = itw.next();
+            Vector<Float> ws = weights.get(node);
+
+
+            if (ws.size() == 0) {
+                int rdeg = nb_remote_neighbors(node);
+                res +=rdeg;
+            } else
+                for (int i = 0; i < ws.size(); i++) {
+                res += ws.getList().get(i);
+            }
+        }
+
+
+        total_weight += res;
+
+
+
+        Iterator<Integer> itr = remoteEdges.keySet().iterator();
+
+        int nlr = 0;
+
+        while (itr.hasNext()) {
+            int node = itr.next();
+            Vector<Integer> r =  remoteEdges.get(node);
+            nlr += r.size();
+
+        }
+        nb_links += nlr;
+
+
+
+        containRemote = true;
+    }
+
+
+    public int nb_remote_neighbors(int node) {
+        assert(node >= 0 && node < nb_nodes);
+        return remoteEdges.get(node).size();
+    }
 
     void display_binary(OutputStream out) {
         //TODO
@@ -156,13 +217,13 @@ public class Graph {
         for (int node = 0; node < nb_nodes; node++) {
             Pair<Integer, Integer> p = neighbors(node);
             for (int i = 0; i < nb_neighbors(node); i++) {
-                int neigh = links.get(p.getElement0() + i);
-                float weight = weights.get(p.getElement1() + i);
+                int neigh = links.getList().get(p.getElement0() + i);
+                float weight = weights.getList().get(p.getElement1() + i);
 
                 Pair<Integer, Integer> p_neigh = neighbors(neigh);
                 for (int j = 0; j < nb_neighbors(neigh); j++) {
-                    int neigh_neigh = links.get(p_neigh.getElement0() + j);
-                    float neigh_weight = weights.get(p_neigh.getElement1() + j);
+                    int neigh_neigh = links.getList().get(p_neigh.getElement0() + j);
+                    float neigh_weight = weights.getList().get(p_neigh.getElement1() + j);
 
                     if (node == neigh_neigh && weight != neigh_weight) {
                         System.out.println("" + node + " " + neigh + " " + weight + " " + neigh_neigh);
@@ -182,11 +243,13 @@ public class Graph {
         assert (node >= 0 && node < nb_nodes);
 
         if (node == 0)
-            return degrees.get(0);
+            return degrees.getList().get(0);
         else
-            return (degrees.get(node) - degrees.get(node - 1));
+            return (degrees.getList().get(node) - degrees.getList().get(node - 1));
 
     }
+
+
 
     // return the number of self loops of the node
     public double nb_selfloops(int node) {
@@ -194,9 +257,9 @@ public class Graph {
 
         Pair<Integer, Integer> p = neighbors(node);
         for (int i = 0; i < nb_neighbors(node); i++) {
-            if (links.get(p.getElement0() + i) == node) {
+            if (links.getList().get(p.getElement0() + i) == node) {
                 if (weights.size() != 0)
-                    return (double) weights.get(p.getElement1() + i);
+                    return (double) weights.getList().get(p.getElement1() + i);
                 else
                     return 1.0;
             }
@@ -214,10 +277,29 @@ public class Graph {
             Pair<Integer, Integer> p = neighbors(node);
             double res = 0;
             for (int i = 0; i < nb_neighbors(node); i++) {
-                res += (double) weights.get(p.getElement1() + i);
+                res += (double) weights.getList().get(p.getElement1() + i);
             }
             return res;
         }
+    }
+
+    public double weighted_degree_wremote(int node) {
+        assert(node >= 0 && node < nb_nodes);
+        if (remoteWeights.get(node).size() == 0) {
+            return nb_remote_neighbors(node);
+        } else {
+            HashMap.SimpleEntry<Vector<Integer>,Vector<Float>> p = remote_neighbors(node);
+            int deg = nb_remote_neighbors(node);
+            double res = 0;
+
+            for (int i = 0; i < deg; i++) {
+                res +=  p.getValue().getList().get(i);
+            }
+
+            return res;
+
+        }
+
     }
 
     // return pointers to the first neighbor and first weight of the node
@@ -225,10 +307,17 @@ public class Graph {
         if (node == 0)
             return new Pair<Integer, Integer>(0, 0);
         else if (weights.size() != 0)
-            return new Pair(degrees.get(node - 1), degrees.get(node - 1));
+            return new Pair(degrees.getList().get(node - 1), degrees.getList().get(node - 1));
         else
-            return new Pair(degrees.get(node - 1), 0);
+            return new Pair(degrees.getList().get(node - 1), 0);
     }
+
+
+    public HashMap.SimpleEntry<Vector<Integer>,Vector<Float>> remote_neighbors(int node) {
+        assert(node >= 0 && node < nb_nodes);
+        return new HashMap.SimpleEntry<Vector<Integer>,Vector<Float>>(remoteEdges.get(node),remoteWeights.get(node));
+    }
+
 
 
     public int getNb_nodes() {
@@ -243,15 +332,15 @@ public class Graph {
         return total_weight;
     }
 
-    public List<Long> getDegrees() {
+    public Vector<Long> getDegrees() {
         return degrees;
     }
 
-    public List<Integer> getLinks() {
+    public Vector<Integer> getLinks() {
         return links;
     }
 
-    public List<Float> getWeights() {
+    public Vector<Float> getWeights() {
         return weights;
     }
 
@@ -267,14 +356,17 @@ public class Graph {
         this.total_weight = total_weight;
     }
 
+    public Vector<RemoteMap> getRemoteMaps() {
+        return remoteMaps;
+    }
 
-     class RemoteMap implements Serializable{
+    class RemoteMap implements Serializable{
 
-        private int source;
+        int source;
 
-        private int sink;
+         int sink;
 
-        private int sinkPart;
+         int sinkPart;
 
         public RemoteMap(int source, int sink, int sinkPart) {
             this.source = source;
@@ -293,5 +385,9 @@ public class Graph {
         public int getSinkPart() {
             return sinkPart;
         }
+    }
+
+    public boolean isContainRemote() {
+        return containRemote;
     }
 }

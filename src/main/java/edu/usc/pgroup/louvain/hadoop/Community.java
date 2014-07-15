@@ -16,8 +16,6 @@
 package edu.usc.pgroup.louvain.hadoop;
 
 
-import sun.security.util.PolicyUtil;
-
 import java.io.InputStream;
 import java.util.*;
 
@@ -37,7 +35,8 @@ public class Community {
     private List<Integer> n2c; // community to which each node belongs
     private List<Double> in, tot; // used to compute the modularity participation of each community
 
-    private List<Integer> n2c_new;
+
+    private Vector<Integer> n2c_new = new Vector<Integer>();
 
     // number of pass for one level computation
     // if -1, compute as many pass as needed to increase modularity
@@ -148,9 +147,9 @@ public class Community {
         neigh_last = 1;
 
         for (int i = 0; i < deg; i++) {
-            int neigh = g.getLinks().get(p.getElement0() + i);;
+            int neigh = g.getLinks().getList().get(p.getElement0() + i);;
             int neigh_comm = n2c.get(neigh);
-            double neigh_w = (g.getWeights().size() == 0) ? 1. : g.getWeights().get(p.getElement1() + i);;
+            double neigh_w = (g.getWeights().size() == 0) ? 1. : g.getWeights().getList().get(p.getElement1() + i);;
 
             if (neigh != node) {
                 if (neigh_weight.get(neigh_comm) == -1) {
@@ -158,6 +157,28 @@ public class Community {
                     neigh_pos.set(neigh_last++,neigh_comm);
                 }
                 neigh_weight.set(neigh_comm, neigh_weight.get(neigh_comm) + neigh_w);
+            }
+        }
+
+
+        if(g.isContainRemote()) {
+
+            AbstractMap.SimpleEntry<Vector<Integer>, Vector<Float>> p1 = g.remote_neighbors(node);
+
+            deg = g.nb_remote_neighbors(node);
+
+            for (int i = 0; i < deg; i++) {
+                int neigh = p1.getKey().getList().get(i);
+                int neigh_comm = n2c.get(neigh);
+                double neigh_w = (g.getWeights().size() == 0) ? 1.0 : p1.getValue().getList().get(i);
+
+                if (neigh != node) {
+                    if (neigh_weight.get(neigh_comm) == -1) {
+                        neigh_weight.set(neigh_comm,0.0);
+                        neigh_pos.set(neigh_last++,neigh_comm);
+                    }
+                    neigh_weight.set(neigh_comm,neigh_weight.get(neigh_comm) + neigh_w);
+                }
             }
         }
     }
@@ -221,6 +242,7 @@ public class Community {
 
         ArrayList<ArrayList<Integer>> comm_nodes = new ArrayList<ArrayList<Integer>>(fin);
 
+        n2c_new.getList().clear();
 
 
         for (int node = 0; node < size; node++) {
@@ -230,7 +252,7 @@ public class Community {
             }
 
             comm_nodes.get(renumber.get(n2c.get(node))).add(node);
-
+            n2c_new.setRandom(node,renumber.get(n2c.get(node)));
         }
 
         // Compute weighted graph
@@ -246,9 +268,9 @@ public class Community {
                 Pair<Integer, Integer> p = g.neighbors(comm_nodes.get(comm).get(node));
                 long deg = g.nb_neighbors(comm_nodes.get(comm).get(node));
                 for (int i = 0; i < deg; i++) {
-                    int neigh = g.getLinks().get(p.getElement0() + i);
+                    int neigh = g.getLinks().getList().get(p.getElement0() + i);
                     int neigh_comm = renumber.get(n2c.get(neigh));
-                    double neigh_weight = (g.getWeights().size() == 0) ? 1. : g.getWeights().get(p.getElement1() + i);;
+                    double neigh_weight = (g.getWeights().size() == 0) ? 1. : g.getWeights().getList().get(p.getElement1() + i);;
 
 
                     if (!m.containsKey(neigh_comm)) {
@@ -257,9 +279,26 @@ public class Community {
                         m.put(neigh_comm,m.get(neigh_comm) + neigh_weight);
                     }
                 }
+                if (g.isContainRemote()) {
+                    HashMap.SimpleEntry<Vector<Integer>,Vector<Float>> p2 = g.remote_neighbors(comm_nodes.get(comm).get(node));
+                    deg = g.nb_remote_neighbors(comm_nodes.get(comm).get(node));
+
+                    for (int i = 0; i < deg; i++) {
+                        int neigh =p2.getKey().getList().get(i);
+                        int neigh_comm = renumber.get(n2c.get(neigh));
+                        double neigh_weight = (g.getWeights().size() == 0)?1.:p2.getValue().getList().get(i);
+
+                        if(m.containsKey(neigh_comm)) {
+                            m.put(neigh_comm,m.get(neigh_comm) + neigh_weight);
+                        } else {
+                            m.put(neigh_comm,neigh_weight);
+                        }
+                    }
+                }
+
             }
 
-            g2.getDegrees().add(comm,(comm == 0) ? m.size() : g2.getDegrees().get(comm - 1) + m.size());
+            g2.getDegrees().getList().add(comm, (comm == 0) ? m.size() : g2.getDegrees().getList().get(comm - 1) + m.size());
             g2.setNb_links(g2.getNb_links() + m.size());
 
 
@@ -270,8 +309,8 @@ public class Community {
                 double value = m.get(key);
 
                 g2.setTotal_weight(g2.getTotal_weight() + value);
-                g2.getLinks().add(key);
-                g2.getWeights().add((float)value);
+                g2.getLinks().getList().add(key);
+                g2.getWeights().getList().add((float) value);
             }
 
 
@@ -316,7 +355,9 @@ public class Community {
                 int node = random_order.get(node_tmp);
                 int node_comm = n2c.get(node);
                 double w_degree = g.weighted_degree(node);
-
+                if(g.isContainRemote()) {
+                    w_degree += g.weighted_degree_wremote(node);
+                }
                 // computation of all neighboring communities of current node
                 neigh_comm(node);
                 // remove node from its current community
@@ -366,5 +407,9 @@ public class Community {
 
     public int getSize() {
         return size;
+    }
+
+    public Vector<Integer> getN2c_new() {
+        return n2c_new;
     }
 }

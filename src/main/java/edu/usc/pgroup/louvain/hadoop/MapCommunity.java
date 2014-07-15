@@ -115,9 +115,21 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
 
     }
 
-    private GraphMessage createGraphMessage(Graph g, Community c, int tank) {
+    private GraphMessage createGraphMessage(Graph g, Community c, int partitionId) {
 
-        return null;
+        GraphMessage msg = new GraphMessage();
+
+        msg.setNb_links(g.getNb_links());
+        msg.setNb_nodes(g.getNb_nodes());
+        msg.setTotal_weight(g.getTotal_weight());
+        msg.setLinks(g.getLinks().getList().toArray(new Integer[0]));
+        msg.setDegrees(g.getDegrees().getList().toArray(new Long[0]));
+        msg.setWeights(g.getWeights().getList().toArray(new Float[0]));
+        msg.setRemoteMap(g.getRemoteMaps().getList().toArray(new Graph.RemoteMap[0]));
+        msg.setN2c(c.getN2c_new().getList().toArray(new Integer[0]));
+
+        msg.setCurrentPartition(partitionId);
+        return msg;
     }
 
 }
