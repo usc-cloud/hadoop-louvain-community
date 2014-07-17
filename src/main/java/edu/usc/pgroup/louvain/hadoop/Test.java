@@ -23,21 +23,17 @@ import java.util.ArrayList;
 public class Test {
 
     public static void main(String[] args) {
-        Vector<Integer> list = new Vector<Integer>();
+        Vector<Float> weights = new Vector<Float>();
 
 
 
-        int array[] = {2,3,1,4,5,0};
 
-        for(int i : array) {
-            list.setRandom(i, i);
+
+        for(int i=0; i < 18146;i++) {
+            weights.getList().add(1.0f);
         }
-        System.out.println("Size: " + list.getList().size());
+        System.out.println("Size: " + (Float)weights.getList().get(0));
 
-
-        for(int i : list.getList()) {
-            System.out.println(i);
-        }
 
 
     }

@@ -53,9 +53,9 @@ public class Community {
         size = g.getNb_nodes();
 
         neigh_weight = new ArrayList<Double>(size);
-        Util.initArrayList((ArrayList<Double>) neigh_weight,-1.0);
+        Util.initArrayList((ArrayList<Double>) neigh_weight,size,-1.0);
         neigh_pos = new ArrayList<Integer>(size);
-        Util.initArrayList((ArrayList<Integer>)neigh_pos,-1);
+        Util.initArrayList((ArrayList<Integer>)neigh_pos,size,-1);
 
         neigh_last = 0;
 
@@ -64,9 +64,9 @@ public class Community {
         tot = new ArrayList<Double>(size);
 
         for (int i = 0; i < size; i++) {
-            n2c.add(i,i);
-            tot.add(i,g.weighted_degree(i));
-            in.add(i,g.nb_selfloops(i));
+            n2c.add(i);
+            tot.add(g.weighted_degree(i));
+            in.add(g.nb_selfloops(i));
         }
 
         this.nb_pass = nb_pass;
@@ -80,18 +80,18 @@ public class Community {
         size = g.getNb_nodes();
 
         neigh_weight = new ArrayList<Double>(size);
-        Util.initArrayList((ArrayList<Double>) neigh_weight,-1.0);
+        Util.initArrayList((ArrayList<Double>) neigh_weight,size,-1.0);
         neigh_pos = new ArrayList<Integer>(size);
-        Util.initArrayList((ArrayList<Integer>)neigh_pos,-1);
+        Util.initArrayList((ArrayList<Integer>)neigh_pos,size,-1);
         neigh_last = 0;
 
         n2c = new ArrayList<Integer>(size);
         in = new ArrayList<Double>(size);
         tot = new ArrayList<Double>(size);
         for (int i = 0; i < size; i++) {
-            n2c.add(i,i);
-            tot.add(i,g.weighted_degree(i));
-            in.add(i,g.nb_selfloops(i));
+            n2c.add(i);
+            tot.add(g.weighted_degree(i) + g.weighted_degree_wremote(i));
+            in.add(g.nb_selfloops(i));
         }
 
         this.nb_pass = nb_pass;
@@ -161,7 +161,7 @@ public class Community {
         }
 
 
-        if(g.isContainRemote()) {
+        if(g.isContainRemote() && g.getRemoteEdges().containsKey(node)) {
 
             AbstractMap.SimpleEntry<Vector<Integer>, Vector<Float>> p1 = g.remote_neighbors(node);
 
@@ -188,8 +188,17 @@ public class Community {
         double m2 = (double) g.getTotal_weight();
 
         for (int i = 0; i < size; i++) {
-            if (tot.get(i) > 0)
-                q += (double) in.get(i) / m2 - ((double) tot.get(i) / m2)*((double) tot.get(i) / m2);
+            if (tot.get(i) > 0) {
+                double tmp = (double) in.get(i) / m2 - ((double) tot.get(i) / m2)*((double) tot.get(i) / m2);
+                if(tmp > 1) {
+                    System.out.println("test");
+                }
+                q += tmp;
+                if(q > 1) {
+                    System.out.println("test2");
+                }
+            }
+
         }
 
         return q;
@@ -205,7 +214,7 @@ public class Community {
 
 
         ArrayList<Integer> renumber = new ArrayList<Integer>(size);
-        Util.initArrayList(renumber,-1);
+        Util.initArrayList(renumber,size,-1);
         for (int node = 0; node < size; node++) {
             renumber.set(n2c.get(node),renumber.get(n2c.get(node)) + 1);
         }
@@ -226,7 +235,7 @@ public class Community {
     // generates the binary graph of communities as computed by one_level
     public Graph partition2graph_binary(){
         ArrayList<Integer> renumber = new ArrayList<Integer>(size);
-        Util.initArrayList(renumber,-1);
+        Util.initArrayList(renumber,size,-1);
         for (int node = 0; node < size; node++) {
             renumber.set(n2c.get(node),renumber.get(n2c.get(node)) + 1);
         }
@@ -241,7 +250,9 @@ public class Community {
 
 
         ArrayList<ArrayList<Integer>> comm_nodes = new ArrayList<ArrayList<Integer>>(fin);
-
+        for(int i=0;i < fin;i++) {
+            comm_nodes.add(null);
+        }
         n2c_new.getList().clear();
 
 
@@ -279,7 +290,8 @@ public class Community {
                         m.put(neigh_comm,m.get(neigh_comm) + neigh_weight);
                     }
                 }
-                if (g.isContainRemote()) {
+
+                if (g.isContainRemote() && g.getRemoteEdges().containsKey(node)) {
                     HashMap.SimpleEntry<Vector<Integer>,Vector<Float>> p2 = g.remote_neighbors(comm_nodes.get(comm).get(node));
                     deg = g.nb_remote_neighbors(comm_nodes.get(comm).get(node));
 
@@ -315,7 +327,7 @@ public class Community {
 
 
         }
-
+        g2.setRemoteMaps(g.getRemoteMaps());
         return g2;
     }
 

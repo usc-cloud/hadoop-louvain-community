@@ -38,7 +38,7 @@ public class GraphMessage implements Serializable{
 
     private Integer[] n2c;
 
-    private Graph.RemoteMap remoteMap[];
+    private RemoteMap remoteMap[];
 
     public Long[] getDegrees() {
         return degrees;
@@ -96,11 +96,11 @@ public class GraphMessage implements Serializable{
         this.n2c = n2c;
     }
 
-    public Graph.RemoteMap[] getRemoteMap() {
+    public RemoteMap[] getRemoteMap() {
         return remoteMap;
     }
 
-    public void setRemoteMap(Graph.RemoteMap[] remoteMap) {
+    public void setRemoteMap(RemoteMap[] remoteMap) {
         this.remoteMap = remoteMap;
     }
 

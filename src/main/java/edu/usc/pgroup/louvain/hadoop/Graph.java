@@ -15,9 +15,6 @@
  */
 package edu.usc.pgroup.louvain.hadoop;
 
-import org.apache.commons.math.optimization.VectorialConvergenceChecker;
-import org.apache.hadoop.mapred.FileInputFormat;
-
 import java.io.*;
 import java.util.*;
 
@@ -35,19 +32,18 @@ public class Graph {
     private long nb_links;
     private double total_weight;
 
-    private Vector<Long> degrees = new Vector<Long>(1000);
-    private Vector<Integer> links = new Vector<Integer>(5000);
-    private Vector<Float> weights = new Vector<Float>(5000);
+    private Vector<Long> degrees = new Vector<Long>();
+    private Vector<Integer> links = new Vector<Integer>();
+    private Vector<Float> weights = new Vector<Float>();
 
 
     private Vector<RemoteMap> remoteMaps = new Vector<RemoteMap>();
 
 
-    private Map<Integer,Vector<Integer>> remoteEdges;
-    private Map<Integer,Vector<Float>> remoteWeights;
+    private Map<Integer, Vector<Integer>> remoteEdges;
+    private Map<Integer, Vector<Float>> remoteWeights;
 
     private boolean containRemote = false;
-
 
 
     Graph() {
@@ -58,8 +54,6 @@ public class Graph {
     }
 
 
-
-
     Graph(InputStream inputStream, int type) throws Exception {
         // Assume metis undirected format and unweighted graph.
 
@@ -67,35 +61,38 @@ public class Graph {
 
         String line = fileReader.readLine();
 
-        TreeMap<Integer,String> graph = new TreeMap<Integer, String>();
+        TreeMap<Integer, String> graph = new TreeMap<Integer, String>();
 
         boolean readingGraph = true;
+
         while (line != null) {
 
             if ("****".equals(line.trim())) {
                 readingGraph = false;
+                line = fileReader.readLine();
                 continue;
             }
 
             if (readingGraph) {
                 StringTokenizer tokenizer = new StringTokenizer(line);
                 int nodeId = Integer.parseInt(tokenizer.nextToken());
-                graph.put(nodeId,line);
+                graph.put(nodeId, line);
             } else {
                 //read remote mappings
-                String parts[] = line.split(" ");
-                int source = Integer.parseInt(parts[1]);
-                String []sinkP = parts[1].split(",");
-                int tartgetP = Integer.parseInt(sinkP[0]);
-                int sink  = Integer.parseInt(sinkP[1]);
+                if (!"".equals(line.trim())) {
+                    String parts[] = line.split(" ");
 
-                remoteMaps.getList().add(new RemoteMap(source, sink, tartgetP));
+                    int source = Integer.parseInt(parts[0]);
+                    String[] sinkP = parts[1].split(",");
+                    int tartgetP = Integer.parseInt(sinkP[0]);
+                    int sink = Integer.parseInt(sinkP[1]);
 
+                    remoteMaps.getList().add(new RemoteMap(source, sink, tartgetP));
+                }
             }
 
-
-
             line = fileReader.readLine();
+
         }
 
 
@@ -113,16 +110,29 @@ public class Graph {
                 links.getList().add(e);
                 count++;
             }
-
-            degrees.setRandom(nodeId, (long) count);
-
+            if(nodeId == 0) {
+                degrees.setRandom(nodeId,(long) count);
+            } else {
+                degrees.setRandom(nodeId,(degrees.getList().get((nodeId-1)) + (long) count));
+            }
         }
 
         graph = null;
 
         this.nb_nodes = degrees.size();
+        System.out.println("nb_nodes = " + nb_nodes);
+
         this.nb_links = degrees.getList().get(nb_nodes - 1);
+
+        System.out.println("nb_links = " + nb_links);
+
         this.total_weight = 0;
+
+        for(int i=0; i < nb_links;i++) {
+            weights.getList().add(1.0f);
+        }
+
+        System.out.println("xxx " + weights.getList().get(0));
 
         // Compute total weight
         for (int i = 0; i < nb_nodes; i++) {
@@ -156,10 +166,10 @@ public class Graph {
         }
     }
 
-    public void addRemoteEdges(Map<Integer,Vector<Integer>> remoteEdges, Map<Integer,Vector<Float>> weights) {
+    public void addRemoteEdges(Map<Integer, Vector<Integer>> remoteEdges, Map<Integer, Vector<Float>> weights) {
 
         this.remoteEdges = remoteEdges;
-        this.remoteWeights= weights;
+        this.remoteWeights = weights;
 
 
         Iterator<Integer> itw = weights.keySet().iterator();
@@ -172,16 +182,15 @@ public class Graph {
 
             if (ws.size() == 0) {
                 int rdeg = nb_remote_neighbors(node);
-                res +=rdeg;
+                res += rdeg;
             } else
                 for (int i = 0; i < ws.size(); i++) {
-                res += ws.getList().get(i);
-            }
+                    res += ws.getList().get(i);
+                }
         }
 
 
         total_weight += res;
-
 
 
         Iterator<Integer> itr = remoteEdges.keySet().iterator();
@@ -190,12 +199,11 @@ public class Graph {
 
         while (itr.hasNext()) {
             int node = itr.next();
-            Vector<Integer> r =  remoteEdges.get(node);
+            Vector<Integer> r = remoteEdges.get(node);
             nlr += r.size();
 
         }
         nb_links += nlr;
-
 
 
         containRemote = true;
@@ -203,7 +211,7 @@ public class Graph {
 
 
     public int nb_remote_neighbors(int node) {
-        assert(node >= 0 && node < nb_nodes);
+        assert (node >= 0 && node < nb_nodes);
         return remoteEdges.get(node).size();
     }
 
@@ -250,7 +258,6 @@ public class Graph {
     }
 
 
-
     // return the number of self loops of the node
     public double nb_selfloops(int node) {
         assert (node >= 0 && node < nb_nodes);
@@ -277,23 +284,31 @@ public class Graph {
             Pair<Integer, Integer> p = neighbors(node);
             double res = 0;
             for (int i = 0; i < nb_neighbors(node); i++) {
-                res += (double) weights.getList().get(p.getElement1() + i);
+
+                int idx = (p.getElement1() + i);
+                if(idx >= weights.size()) {
+                    System.out.println("Err node: " + node);
+                }
+               res += (double) weights.getList().get(idx);
             }
             return res;
         }
     }
 
     public double weighted_degree_wremote(int node) {
-        assert(node >= 0 && node < nb_nodes);
+        assert (node >= 0 && node < nb_nodes);
+        if(!containRemote || !remoteWeights.containsKey(node)) {
+            return 0.0;
+        }
         if (remoteWeights.get(node).size() == 0) {
             return nb_remote_neighbors(node);
         } else {
-            HashMap.SimpleEntry<Vector<Integer>,Vector<Float>> p = remote_neighbors(node);
+            HashMap.SimpleEntry<Vector<Integer>, Vector<Float>> p = remote_neighbors(node);
             int deg = nb_remote_neighbors(node);
             double res = 0;
 
             for (int i = 0; i < deg; i++) {
-                res +=  p.getValue().getList().get(i);
+                res += p.getValue().getList().get(i);
             }
 
             return res;
@@ -307,17 +322,16 @@ public class Graph {
         if (node == 0)
             return new Pair<Integer, Integer>(0, 0);
         else if (weights.size() != 0)
-            return new Pair(degrees.getList().get(node - 1), degrees.getList().get(node - 1));
+            return new Pair(degrees.getList().get(node - 1).intValue(), degrees.getList().get(node - 1).intValue());
         else
-            return new Pair(degrees.getList().get(node - 1), 0);
+            return new Pair(degrees.getList().get(node - 1).intValue(), 0);
     }
 
 
-    public HashMap.SimpleEntry<Vector<Integer>,Vector<Float>> remote_neighbors(int node) {
-        assert(node >= 0 && node < nb_nodes);
-        return new HashMap.SimpleEntry<Vector<Integer>,Vector<Float>>(remoteEdges.get(node),remoteWeights.get(node));
+    public HashMap.SimpleEntry<Vector<Integer>, Vector<Float>> remote_neighbors(int node) {
+        assert (node >= 0 && node < nb_nodes);
+        return new HashMap.SimpleEntry<Vector<Integer>, Vector<Float>>(remoteEdges.get(node), remoteWeights.get(node));
     }
-
 
 
     public int getNb_nodes() {
@@ -360,34 +374,20 @@ public class Graph {
         return remoteMaps;
     }
 
-    class RemoteMap implements Serializable{
-
-        int source;
-
-         int sink;
-
-         int sinkPart;
-
-        public RemoteMap(int source, int sink, int sinkPart) {
-            this.source = source;
-            this.sink = sink;
-            this.sinkPart = sinkPart;
-        }
-
-        public int getSource() {
-            return source;
-        }
-
-        public int getSink() {
-            return sink;
-        }
-
-        public int getSinkPart() {
-            return sinkPart;
-        }
-    }
 
     public boolean isContainRemote() {
         return containRemote;
+    }
+
+    public void setRemoteMaps(Vector<RemoteMap> remoteMaps) {
+        this.remoteMaps = remoteMaps;
+    }
+
+    public Map<Integer, Vector<Integer>> getRemoteEdges() {
+        return remoteEdges;
+    }
+
+    public Map<Integer, Vector<Float>> getRemoteWeights() {
+        return remoteWeights;
     }
 }

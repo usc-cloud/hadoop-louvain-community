@@ -18,9 +18,11 @@ package edu.usc.pgroup.louvain.hadoop;
 
 import com.sun.org.apache.xerces.internal.xni.grammars.Grammar;
 import org.apache.commons.math.optimization.VectorialConvergenceChecker;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import sun.tools.jar.resources.jar;
 
@@ -43,12 +45,13 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
 
         Graph g = null;
         try {
+            System.out.println("********************REDUCE****************");
             g = reconstructGraph(values);
         } catch (Exception e) {
             e.printStackTrace();
             throw new InterruptedException(e.toString());
         }
-
+        System.out.println("REDUCE...... GRAPH DONE");
         Community c = new Community(g, -1, precision);
 
         double mod = c.modularity();
@@ -57,7 +60,7 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
 
 
         if (verbose)
-            System.out.print(" new modularity : " + mod);
+            System.out.println(" new modularity : " + mod);
 
 
         int level = 2;
@@ -65,7 +68,7 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
         if (verbose) {
             System.out.print("level " + level);
             System.out.print("  start computation");
-            System.out.print("  network size: "
+            System.out.println("  network size: "
                     + c.getG().getNb_nodes() + " nodes, "
                     + c.getG().getNb_links() + " links, "
                     + c.getG().getTotal_weight() + " weight.");
@@ -77,13 +80,14 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
 
         if (++level == display_level)
             g.display();
-        if (display_level == -1)
-            c.display_partition();
+        if (display_level == -1) {
+           // c.display_partition();
+        }
 
         Graph g2 = c.partition2graph_binary();
 
         if (verbose) {
-            System.out.print("  network size: "
+            System.out.println("  network size: "
                     + c.getG().getNb_nodes() + " nodes, "
                     + c.getG().getNb_links() + " links, "
                     + c.getG().getTotal_weight() + " weight.");
@@ -102,7 +106,7 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
             if (verbose) {
                 System.out.print("level in loop" + level);
                 System.out.print("  start computation");
-                System.out.print("  network size: "
+                System.out.println("  network size: "
                         + c.getG().getNb_nodes() + " nodes, "
                         + c.getG().getNb_links() + " links, "
                         + c.getG().getTotal_weight() + " weight.");
@@ -113,8 +117,9 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
 
             if (++level == display_level)
                 g.display();
-            if (display_level == -1)
-                c.display_partition();
+            if (display_level == -1) {
+               // c.display_partition();
+            }
 
             g2 = c.partition2graph_binary();
 
@@ -141,6 +146,14 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
         System.out.println(" Final modularity : " + new_mod);
     }
 
+    @Override
+    protected void setup(Context context) throws IOException, InterruptedException {
+        Configuration configuration = context.getConfiguration();
+        verbose = configuration.getBoolean(LouvainMR.VERBOSE, false);
+        precision = configuration.getDouble(LouvainMR.PRECISION,0.000001);
+        display_level = configuration.getInt(LouvainMR.DISPLAY_LEVEL,-1);
+        super.setup(context);
+    }
 
     private Graph reconstructGraph(Iterable<BytesWritable> values) throws Exception {
 
@@ -172,7 +185,7 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
         for (int i = 0; i < map.keySet().size(); i++) {
 
             GraphMessage msg = map.get(i);
-
+            long currentDegreelen = msg.getDegrees()[msg.getDegrees().length -1];
             if (i != 0) {
                 for (int j = 0; j < msg.getLinks().length; j++) {
                     msg.getLinks()[j] += gap;
@@ -193,7 +206,7 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
             }
 
             gap += msg.getNb_nodes();
-            degreeGap += msg.getDegrees()[msg.getDegrees().length - 1];
+            degreeGap += currentDegreelen;
         }
 
 
@@ -226,7 +239,7 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
             GraphMessage msg = map.get(i);
             for (int j = 0; j < msg.getRemoteMap().length; j++) {
 
-                Graph.RemoteMap remoteMap = msg.getRemoteMap()[j];
+                RemoteMap remoteMap = msg.getRemoteMap()[j];
 
                 int sink = remoteMap.sink;
                 int sinkPart = remoteMap.sinkPart;

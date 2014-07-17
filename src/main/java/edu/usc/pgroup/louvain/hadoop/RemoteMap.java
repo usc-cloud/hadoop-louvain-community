@@ -15,23 +15,34 @@
  */
 package edu.usc.pgroup.louvain.hadoop;
 
-import java.util.ArrayList;
+import java.io.Serializable;
 
 /**
- * Created by Charith Wickramaarachchi on 7/2/14.
+ * Created by Charith Wickramaarachchi on 7/17/14.
  */
-public final class Util {
+class RemoteMap implements Serializable {
 
+    int source;
 
-    public static void  initArrayList(ArrayList<Double> list ,int size ,double e) {
-        for(int i =0 ; i < size;i++) {
-            list.add(e);
-        }
+    int sink;
+
+    int sinkPart;
+
+    public RemoteMap(int source, int sink, int sinkPart) {
+        this.source = source;
+        this.sink = sink;
+        this.sinkPart = sinkPart;
     }
 
-    public static void  initArrayList(ArrayList<Integer> list, int size, int e) {
-        for(int i =0 ; i < size;i++) {
-            list.add(e);
-        }
+    public int getSource() {
+        return source;
+    }
+
+    public int getSink() {
+        return sink;
+    }
+
+    public int getSinkPart() {
+        return sinkPart;
     }
 }

@@ -16,6 +16,7 @@
 package edu.usc.pgroup.louvain.hadoop;
 
 import com.sun.corba.se.spi.orbutil.fsm.Input;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Mapper;
@@ -32,6 +33,9 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
     private double precision = 0.000001;
 
     private int display_level =-1;
+
+
+
     @Override
     protected void map(Text key, BytesWritable value, Context context) throws IOException, InterruptedException {
         /**
@@ -48,11 +52,10 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
 
         String _parts[] = fileName.split("_");
 
-        String dotParts[] = _parts[1].split(".");
-
+        String dotParts[] = _parts[1].split("\\.");
 
         InputStream inputStream = new ByteArrayInputStream(value.getBytes());
-        int rank = Integer.parseInt(dotParts[1]);
+        int rank = Integer.parseInt(dotParts[0]);
 
         if(verbose) {
             System.out.println("Begin");
@@ -68,7 +71,7 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
             if (verbose) {
                 System.out.print("" + rank  + ":" +  "level " + level );
                 System.out.print("  start computation");
-                System.out.print( "  network size: "
+                System.out.println( "  network size: "
                         + c.getG().getNb_nodes() +  " nodes, "
                         + c.getG().getNb_links() + " links, "
                         + c.getG().getTotal_weight() + " weight." );
@@ -83,13 +86,13 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
 
             if (++level == display_level)
                 g.display();
-            if (display_level == -1)
-                c.display_partition();
-
+            if (display_level == -1){
+                //c.display_partition();
+            }
             g = c.partition2graph_binary();
 
             if(verbose) {
-                System.out.print( "  network size: "
+                System.out.println( "  network size: "
                         + c.getG().getNb_nodes() +  " nodes, "
                         + c.getG().getNb_links() + " links, "
                         + c.getG().getTotal_weight() + " weight." );
@@ -113,6 +116,20 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
             throw new InterruptedException(e.toString());
         }
 
+
+
+    }
+
+
+    @Override
+    protected void setup(Context context) throws IOException, InterruptedException {
+        Configuration configuration = context.getConfiguration();
+        verbose = configuration.getBoolean(LouvainMR.VERBOSE,false);
+        nb_pass = configuration.getInt(LouvainMR.NB_PASS,0);
+        precision = configuration.getDouble(LouvainMR.PRECISION,0.000001);
+        display_level = configuration.getInt(LouvainMR.DISPLAY_LEVEL,-1);
+
+        super.setup(context);
     }
 
     private GraphMessage createGraphMessage(Graph g, Community c, int partitionId) {
@@ -125,7 +142,7 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
         msg.setLinks(g.getLinks().getList().toArray(new Integer[0]));
         msg.setDegrees(g.getDegrees().getList().toArray(new Long[0]));
         msg.setWeights(g.getWeights().getList().toArray(new Float[0]));
-        msg.setRemoteMap(g.getRemoteMaps().getList().toArray(new Graph.RemoteMap[0]));
+        msg.setRemoteMap(g.getRemoteMaps().getList().toArray(new RemoteMap[0]));
         msg.setN2c(c.getN2c_new().getList().toArray(new Integer[0]));
 
         msg.setCurrentPartition(partitionId);
