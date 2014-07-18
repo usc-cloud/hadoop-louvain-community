@@ -16,7 +16,11 @@
 package edu.usc.pgroup.louvain.hadoop;
 
 
-import java.io.InputStream;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+
+import java.io.*;
 import java.util.*;
 
 /**
@@ -55,7 +59,7 @@ public class Community {
         neigh_weight = new ArrayList<Double>(size);
         Util.initArrayList((ArrayList<Double>) neigh_weight,size,-1.0);
         neigh_pos = new ArrayList<Integer>(size);
-        Util.initArrayList((ArrayList<Integer>)neigh_pos,size,-1);
+        Util.initArrayList((ArrayList<Integer>)neigh_pos,size,0);
 
         neigh_last = 0;
 
@@ -82,7 +86,7 @@ public class Community {
         neigh_weight = new ArrayList<Double>(size);
         Util.initArrayList((ArrayList<Double>) neigh_weight,size,-1.0);
         neigh_pos = new ArrayList<Integer>(size);
-        Util.initArrayList((ArrayList<Integer>)neigh_pos,size,-1);
+        Util.initArrayList((ArrayList<Integer>)neigh_pos,size,0);
         neigh_last = 0;
 
         n2c = new ArrayList<Integer>(size);
@@ -103,7 +107,7 @@ public class Community {
 
         assert(node >= 0 && node < size);
 
-        tot.set(comm,tot.get(comm)-g.weighted_degree(node));
+        tot.set(comm,tot.get(comm)-g.weighted_degree(node) - g.weighted_degree_wremote(node));
         in.set(comm, in.get(comm) - 2 * dnodecomm + g.nb_selfloops(node));
         n2c.set(node,-1);
 
@@ -113,7 +117,7 @@ public class Community {
 
         assert(node >= 0 && node < size);
 
-        tot.set(comm,tot.get(comm) + g.weighted_degree(node));
+        tot.set(comm,tot.get(comm) + g.weighted_degree(node) + g.weighted_degree_wremote(node));
         in.set(comm, in.get(comm) +  2 * dnodecomm + g.nb_selfloops(node));
         n2c.set(node,comm);
 
@@ -189,14 +193,8 @@ public class Community {
 
         for (int i = 0; i < size; i++) {
             if (tot.get(i) > 0) {
-                double tmp = (double) in.get(i) / m2 - ((double) tot.get(i) / m2)*((double) tot.get(i) / m2);
-                if(tmp > 1) {
-                    System.out.println("test");
-                }
+                double tmp = ((double) in.get(i) /(double) m2) - ((double) tot.get(i) / (double)m2)*((double) tot.get(i) / (double)m2);
                 q += tmp;
-                if(q > 1) {
-                    System.out.println("test2");
-                }
             }
 
         }
@@ -231,6 +229,49 @@ public class Community {
         }
 
     }
+
+
+    // displays the current partition (with communities renumbered from 0 to k-1)
+    public void display_partition(String fileName) throws Exception{
+
+
+        Path pt = new Path(fileName);
+        FileSystem fs = FileSystem.get(new Configuration());
+
+        if (fs.exists(pt)) {
+            fs.delete(pt, true);
+
+        }
+
+
+        BufferedWriter br = new BufferedWriter(new OutputStreamWriter(fs.create(pt, true)));
+
+        PrintWriter out = new PrintWriter(br);
+        ArrayList<Integer> renumber = new ArrayList<Integer>(size);
+        Util.initArrayList(renumber,size,-1);
+        for (int node = 0; node < size; node++) {
+            renumber.set(n2c.get(node),renumber.get(n2c.get(node)) + 1);
+        }
+
+        int fin = 0;
+        for (int i = 0; i < size; i++)
+            if (renumber.get(i) != -1) {
+                renumber.set(i,fin++);
+            }
+
+
+        for (int i = 0; i < size; i++) {
+            out.println("" + i + " " + renumber.get(n2c.get(i)));
+        }
+
+
+        out.flush();
+        out.close();
+
+
+
+    }
+
 
     // generates the binary graph of communities as computed by one_level
     public Graph partition2graph_binary(){
@@ -396,18 +437,18 @@ public class Community {
                     nb_moves++;
             }
 
-            double total_tot = 0;
-            double total_in = 0;
-            for (int i = 0; i < tot.size(); i++) {
-                total_tot += tot.get(i);
-                total_in += in.get(i);
-            }
+//            double total_tot = 0.0;
+//            double total_in = 0.0;
+//            for (int i = 0; i < tot.size(); i++) {
+//                total_tot += tot.get(i);
+//                total_in += in.get(i);
+//            }
 
             new_mod = modularity();
             if (nb_moves > 0)
                 improvement = true;
 
-        } while (nb_moves > 0 && new_mod - cur_mod > min_modularity);
+        } while (nb_moves > 0 && Math.abs(new_mod - cur_mod) > min_modularity);
 
         return improvement;
     }

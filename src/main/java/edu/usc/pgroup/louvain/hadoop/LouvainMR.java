@@ -37,6 +37,7 @@ public class LouvainMR {
 
     public static final String DISPLAY_LEVEL = "DISPLAY_LEVEL";
 
+    public static final String OUT_PATH = "OUT_PATH";
 
     public static void main(String[] args) throws Exception{
         Configuration conf = new Configuration();
@@ -50,6 +51,7 @@ public class LouvainMR {
 
         conf.setInt(DISPLAY_LEVEL,displayLevel);
         conf.setBoolean(VERBOSE,v);
+        conf.set(OUT_PATH,args[1]);
 
         Job job = new Job(conf);
         job.setJobName(TestJob.class.getName());

@@ -183,7 +183,7 @@ public class DataConverter {
 
             for(int j=0; j < currentRemoteList.size(); j++) {
 
-                HashMap.SimpleEntry entry = currentRemoteList.get(i);
+                HashMap.SimpleEntry entry = currentRemoteList.get(j);
                 int source = (Integer)entry.getKey();
                 int sink = (Integer)entry.getValue();
                 int sinkPartition = mapping.get(sink);

@@ -27,6 +27,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import sun.tools.jar.resources.jar;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.*;
@@ -39,6 +40,7 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
     private double precision = 0.000001;
     private boolean verbose;
     int display_level = -1;
+    String outpath;
 
     @Override
     protected void reduce(Text key, Iterable<BytesWritable> values, Context context) throws IOException, InterruptedException {
@@ -59,10 +61,6 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
         boolean improvement = true;
 
 
-        if (verbose)
-            System.out.println(" new modularity : " + mod);
-
-
         int level = 2;
 
         if (verbose) {
@@ -81,7 +79,13 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
         if (++level == display_level)
             g.display();
         if (display_level == -1) {
-           // c.display_partition();
+            String filePath = outpath + File.separator + "out_" + (level-1) + "_r.txt";
+            try {
+                c.display_partition(filePath);
+            } catch (Exception e) {
+                e.printStackTrace();
+                throw  new InterruptedException(e.toString());
+            }
         }
 
         Graph g2 = c.partition2graph_binary();
@@ -95,8 +99,7 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
 
 
         c = new Community(g2, -1, precision);
-        if (verbose)
-            System.out.println("  modularity increased from " + mod + " to " + new_mod);
+
 
         mod = new_mod;
 
@@ -118,7 +121,14 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
             if (++level == display_level)
                 g.display();
             if (display_level == -1) {
-               // c.display_partition();
+
+                String filePath = outpath + File.separator + "out_" + (level-1) + "_r.txt";
+                try {
+                    c.display_partition(filePath);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    throw  new InterruptedException(e.toString());
+                }
             }
 
             g2 = c.partition2graph_binary();
@@ -134,24 +144,24 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
             c = new Community(g2, -1, precision);
 
 
-            if (verbose)
-                System.out.println("  modularity increased from " + mod + " to " + new_mod);
-
             mod = new_mod;
 
 
         } while (improvement);
 
-
-        System.out.println(" Final modularity : " + new_mod);
     }
 
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         Configuration configuration = context.getConfiguration();
         verbose = configuration.getBoolean(LouvainMR.VERBOSE, false);
-        precision = configuration.getDouble(LouvainMR.PRECISION,0.000001);
-        display_level = configuration.getInt(LouvainMR.DISPLAY_LEVEL,-1);
+        precision = configuration.getDouble(LouvainMR.PRECISION, 0.000001);
+        display_level = configuration.getInt(LouvainMR.DISPLAY_LEVEL, -1);
+        this.outpath = configuration.get(LouvainMR.OUT_PATH);
+        System.out.println("verbose = " + verbose);
+        System.out.println("display_level = " + display_level);
+        System.out.println("outpath = " + outpath);
+
         super.setup(context);
     }
 

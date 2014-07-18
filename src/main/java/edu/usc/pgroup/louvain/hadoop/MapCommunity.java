@@ -34,6 +34,8 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
 
     private int display_level =-1;
 
+    private String outpath;
+
 
 
     @Override
@@ -63,7 +65,7 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
 
         try {
             Community c = new Community(inputStream,-1,nb_pass,precision);
-            Graph g = new Graph();
+            Graph g =null;
             boolean improvement = true;
             double mod = c.modularity(), new_mod;
             int level = 0;
@@ -87,7 +89,8 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
             if (++level == display_level)
                 g.display();
             if (display_level == -1){
-                //c.display_partition();
+                String filepath = outpath + File.separator + "out_" + level + "_" + rank + ".txt";
+                c.display_partition(filepath);
             }
             g = c.partition2graph_binary();
 
@@ -117,19 +120,26 @@ public class MapCommunity extends Mapper<Text, BytesWritable, Text, BytesWritabl
         }
 
 
-
     }
 
 
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
         Configuration configuration = context.getConfiguration();
+
         verbose = configuration.getBoolean(LouvainMR.VERBOSE,false);
-        nb_pass = configuration.getInt(LouvainMR.NB_PASS,0);
-        precision = configuration.getDouble(LouvainMR.PRECISION,0.000001);
-        display_level = configuration.getInt(LouvainMR.DISPLAY_LEVEL,-1);
+        nb_pass = configuration.getInt(LouvainMR.NB_PASS, 0);
+        precision = configuration.getDouble(LouvainMR.PRECISION, 0.000001);
+        display_level = configuration.getInt(LouvainMR.DISPLAY_LEVEL, -1);
+        outpath = configuration.get(LouvainMR.OUT_PATH);
+
+        System.out.println("verbose = " + verbose);
+        System.out.println("display_level = " + display_level);
+        System.out.println("outpath = " + outpath);
+
 
         super.setup(context);
+
     }
 
     private GraphMessage createGraphMessage(Graph g, Community c, int partitionId) {
