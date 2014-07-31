@@ -19,6 +19,8 @@ package edu.usc.pgroup.louvain.hadoop;
 import com.sun.org.apache.xerces.internal.xni.grammars.Grammar;
 import org.apache.commons.math.optimization.VectorialConvergenceChecker;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.BytesWritable;
 import org.apache.hadoop.io.IntWritable;
 import org.apache.hadoop.io.Text;
@@ -26,10 +28,7 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import sun.tools.jar.resources.jar;
 
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.ObjectInputStream;
+import java.io.*;
 import java.util.*;
 
 /**
@@ -192,6 +191,19 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
 
         int gap = 0;
         int degreeGap = 0;
+        Path pt = new Path(outpath + File.separator +"Map-Partition-Sizes");
+        FileSystem fs = FileSystem.get(new Configuration());
+
+        if (fs.exists(pt)) {
+            fs.delete(pt, true);
+
+        }
+
+
+        BufferedWriter br = new BufferedWriter(new OutputStreamWriter(fs.create(pt, true)));
+
+        PrintWriter out = new PrintWriter(br);
+
         for (int i = 0; i < map.keySet().size(); i++) {
 
             GraphMessage msg = map.get(i);
@@ -211,15 +223,22 @@ public class ReduceCommunity extends Reducer<Text, BytesWritable, Text, Text> {
 
                 for (int j = 0; j < msg.getDegrees().length; j++) {
                     msg.getDegrees()[j] += degreeGap;
+
+
+
+
                 }
 
             }
 
+
+            out.println("" + i + "," + msg.getNb_nodes());
             gap += msg.getNb_nodes();
             degreeGap += currentDegreelen;
         }
 
-
+        out.flush();
+        out.close();
         //Integrate
 
         Graph graph = new Graph();

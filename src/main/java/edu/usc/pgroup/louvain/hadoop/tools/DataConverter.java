@@ -59,9 +59,11 @@ public class DataConverter {
 
         String fileName = file.getName();
         String graphFileName = fileName.replaceFirst("[.][^.]+$", "");
-
+        String graphMappingsFile = graphFileName + "_" + "map.txt";
 
         PrintWriter []writer = new PrintWriter[numberOfPartitions];
+
+        PrintWriter mapWriter = new PrintWriter(graphFileName);
 
         for(int i=0;i < numberOfPartitions;i++) {
             writer[i] = new PrintWriter(new FileWriter(file.getParent()+ File.separator + graphFileName + "_" + i + ".part"));
@@ -82,7 +84,7 @@ public class DataConverter {
 
         BufferedReader graphReader = new BufferedReader(new FileReader(args[0]));
 
-        line = graphReader.readLine();
+        line = graphReader.readLine(); // first line contain number of nodes and edges
         line = graphReader.readLine();
 
 
@@ -145,6 +147,8 @@ public class DataConverter {
                         int v= localV++;
                         localMap.put(val,v);
                         newCurrentPart.add(j,v);
+                        //write mappings from original vertices to local vertices
+                        mapWriter.println("" + i + "," + val + "," + v);
                     }
                 }
 
@@ -153,6 +157,9 @@ public class DataConverter {
             currentPart.clear();
             partitions.set(i,newCurrentPart);
         }
+
+        mapWriter.flush();
+        mapWriter.close();
 
         System.out.println("Re-Numbering done..");
 
