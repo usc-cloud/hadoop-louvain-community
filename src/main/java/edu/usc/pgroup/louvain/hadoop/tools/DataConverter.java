@@ -148,7 +148,8 @@ public class DataConverter {
                         localMap.put(val,v);
                         newCurrentPart.add(j,v);
                         //write mappings from original vertices to local vertices
-                        mapWriter.println("" + i + "," + val + "," + v);
+                        // partition id,metis vertex id,local id
+                        mapWriter.println("" + i + "," + (val+1) + "," + v);
                     }
                 }
 
