@@ -108,7 +108,7 @@ public class Community {
         assert(node >= 0 && node < size);
 
         tot.set(comm,tot.get(comm)-g.weighted_degree(node) - g.weighted_degree_wremote(node));
-        in.set(comm, in.get(comm) - 2 * dnodecomm + g.nb_selfloops(node));
+        in.set(comm, in.get(comm) - (2 * dnodecomm + g.nb_selfloops(node)));
         n2c.set(node,-1);
 
     }
@@ -118,7 +118,7 @@ public class Community {
         assert(node >= 0 && node < size);
 
         tot.set(comm,tot.get(comm) + g.weighted_degree(node) + g.weighted_degree_wremote(node));
-        in.set(comm, in.get(comm) +  2 * dnodecomm + g.nb_selfloops(node));
+        in.set(comm, in.get(comm) +  (2 * dnodecomm + g.nb_selfloops(node)));
         n2c.set(node,comm);
 
     }
